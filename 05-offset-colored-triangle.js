@@ -106,7 +106,6 @@ async function main()
     const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
     passEncoder.setPipeline(pipeline);
     passEncoder.setVertexBuffer(0, vertexBuffer);
-    passEncoder.setVertexBuffer(1, vertexBuffer);
     passEncoder.draw(vertexData.length / 5); 
     passEncoder.end();
 

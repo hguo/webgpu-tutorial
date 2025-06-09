@@ -120,7 +120,7 @@ async function main()
     passEncoder.setVertexBuffer(0, vertexBuffer);
     passEncoder.setVertexBuffer(1, vertexBuffer);
     passEncoder.setIndexBuffer(indexBuffer, 'uint32');
-    passEncoder.drawIndexed(4 /* number of indices */, 2 /* number of objects */);
+    passEncoder.drawIndexed(6);
     passEncoder.end();
 
     // fire up the GPU to render the load value to the output texture
