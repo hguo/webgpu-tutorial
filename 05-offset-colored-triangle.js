@@ -60,7 +60,7 @@ async function main()
             {
               shaderLocation: 1,
               offset: 2 * 4, // the offset is two floating-point numbers
-              format: 'float32x2',
+              format: 'float32x3',
             }
           ]
         },
