@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>H Guo WebGPU tutorial - hierarchical transformation for a solar system</title>
+  <style>
+    table { border-collapse: collapse; }
+    td, th { padding: 4px 8px; }
+    th { text-align: right; }
+    label { white-space: nowrap; }
+  </style>
+	<script type="text/javascript" src="gl-matrix.js"></script>
+</head>
+
+<body>
+  <table>
+    <tr>
+      <td>sunTrans</td><td><input type="number" id="sunTrans" step="0.1" value="0" onchange="updateTransformations();"></td>
+      <td>sunScale</td><td><input type="number" id="sunScale" step="0.1" value="0.25" onchange="updateTransformations();"></td>
+      <td>sunRot</td><td><input type="number" id="sunRot" value="30" onchange="updateTransformations();"></td>
+    </tr>
+    <tr>
+      <td>earthTrans</td><td><input type="number" id="earthTrans" step="0.1" value="1.5" onchange="updateTransformations();"></td>
+      <td>earthScale</td><td><input type="number" id="earthScale" step="0.1" value="0.5" onchange="updateTransformations();"></td>
+      <td>earthRot</td><td><input type="number" id="earthRot" value="30" onchange="updateTransformations();"></td>
+    </tr>
+    <tr>
+      <td>moonTrans</td><td><input type="number" id="moonTrans" step="0.1" value="1.5" onchange="updateTransformations();"></td>
+      <td>moonScale</td><td><input type="number" id="moonScale" step="0.1" value="0.5" onchange="updateTransformations();"></td>
+      <td>moonRot</td><td><input type="number" id="moonRot" value="45" onchange="updateTransformations();"></td>
+    </tr>
+    <tr>
+      <td>marsTrans</td><td><input type="number" id="marsTrans" step="0.1" value="2.5" onchange="updateTransformations();"></td>
+      <td>marsScale</td><td><input type="number" id="marsScale" step="0.1" value="0.4" onchange="updateTransformations();"></td>
+      <td>marsRot</td><td><input type="number" id="marsRot" value="60" onchange="updateTransformations();"></td>
+    </tr>
+  </table>
+  <br>
+  <canvas id="webgpu-canvas" width="500" height="500"></canvas>
+  <script src="12-matrix-stack.js"></script>
+</body>
+
+</html>
