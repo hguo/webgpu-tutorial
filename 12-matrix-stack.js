@@ -69,10 +69,10 @@ async function updateTransformations() {
   glMatrix.mat4.rotate(M, M, degToRad(vMoonRot), [0, 0, 1]);
   glMatrix.mat4.copy(moonMatrix, M);
 
-  // Pop earth matrix
+  // Pop moon matrix
   M = stack.pop();
 
-  // Pop sun matrix
+  // Pop earth matrix, now M is the sun matrix
   M = stack.pop();
 
   // --- Mars (as another child of Sun) ---
