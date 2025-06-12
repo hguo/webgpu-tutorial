@@ -5,15 +5,15 @@ var projMatrix = glMatrix.mat4.create();
 var viewMatrix = glMatrix.mat4.create();
 var modelMatrix = glMatrix.mat4.create();
 var normalMatrix = glMatrix.mat4.create();
-var lightPosition = glMatrix.vec3.fromValues(10.0, 10.0, 10.0);
+var lightPosition = glMatrix.vec3.fromValues(10.0, 10.0, 10.0); // in world space
+var cameraPosition = glMatrix.vec3.fromValues(0.0, 0.0, 60.0);
 var ambientColor = glMatrix.vec3.fromValues(0.2, 0.2, 0.2);
 var diffuseColor = glMatrix.vec3.fromValues(1.0, 1.0, 1.0);
 var specularColor = glMatrix.vec3.fromValues(1.0, 1.0, 1.0);
 var Ka = 0.5; // ambient reflectivity
 var Kd = 0.4; // diffuse reflectivity
 var Ks = 1.0; // specular reflectivity
-var shininess = 60.0; // shininess factor for specular highlights
-var cameraPosition = glMatrix.vec3.fromValues(0.0, 0.0, 60.0);
+var shininess = 100.0; // shininess factor for specular highlights
 
 var angle = 0.0; // rotation angle
 
@@ -94,19 +94,15 @@ async function main()
         modelMatrix: mat4x4<f32>,
         normalMatrix: mat4x4<f32>,
         lightPosition: vec3f,
-        _pad1: f32, // padding to 16 bytes
+        cameraPosition: vec3f,
         ambientColor: vec3f,
-        _pad2: f32, // padding to 16 bytes
         diffuseColor: vec3f,
-        _pad3: f32, // padding to 16 bytes
         specularColor: vec3f,
-        _pad4: f32, // padding to 16 bytes
         Ka: f32,
         Kd: f32,
         Ks: f32,
         shininess: f32,
-        cameraPosition: vec3f,
-        _pad: f32, // padding to 16 bytes
+        _pad: vec3f, // padding to 16-byte alignment
       };
       @group(0) @binding(0) var<uniform> uniforms : Uniforms;
 
@@ -123,10 +119,6 @@ async function main()
 
       @vertex fn vs(in : VSIn) -> VSOut
       {
-        var out : VSOut;
-        
-        out.pos = uniforms.projMatrix * uniforms.viewMatrix * uniforms.modelMatrix * vec4f(in.pos, 1.0);
-
         // position in the eye space
         let pos_in_eye_space = (uniforms.viewMatrix * uniforms.modelMatrix * vec4f(in.pos, 1.0)).xyz;
 
@@ -137,21 +129,25 @@ async function main()
         // normal in the eye space
         var normal = normalize((uniforms.normalMatrix * vec4f(in.normal, 0.0)).xyz);
         
-        // light vector
-        var light_vector = normalize(uniforms.lightPosition - in.pos);
-
         // viewing direction in the eye space
         var eye_vector = normalize(-uniforms.cameraPosition);
 
+        // ambient
         let ambient = uniforms.ambientColor * uniforms.Ka;
-        let ndotl = max(dot(normal, light_vector), 0.0);
+        
+        // diffuse
+        let ndotl = max(dot(normal, light_dir_in_eye_space), 0.0);
         let diffuse = uniforms.diffuseColor * uniforms.Kd * ndotl;
 
-        let reflectDir = reflect(light_vector, normal);
+        // specular
+        let reflectDir = reflect(light_dir_in_eye_space, normal);
         let rdotv = max(dot(reflectDir, eye_vector), 0.0);
         let spec = pow(rdotv, uniforms.shininess);
         let specular = uniforms.specularColor * uniforms.Ks * spec;
 
+        var out : VSOut;
+
+        out.pos = uniforms.projMatrix * uniforms.viewMatrix * uniforms.modelMatrix * vec4f(in.pos, 1.0);
         out.color = vec4(ambient + diffuse + specular, 1.0); 
         return out;
       }
@@ -207,13 +203,14 @@ async function main()
 
   const teapotData = await loadJSON(device, 'teapot.json');
 
-  // uniform buffers
+  // --- Uniform buffer size calculation ---
+  // 4 matrices: 4*64 = 256 bytes
+  // 5 vec3: 5*16 = 80 bytes (lightPosition, ambientColor, diffuseColor, specularColor, cameraPosition)
+  // 4 f32: 16 bytes (Ka, Kd, Ks, shininess)
+  // 1 vec3: 16 bytes (_pad)
+  // Total: 256 + 80 + 16 + 16 = 368 bytes
   const uniformBuffer = device.createBuffer({
-    size: 4 * 16 * 4 // 4 matrices
-      + 4 * 4 * 4   // 4 vec3 (lightPosition, ambientColor, diffuseColor, specularColor)
-      + 4 * 4       // 4 f32 (Ka, Kd, Ks, shininess)
-      + 4 * 4       // cameraPosition (vec3)
-      + 4,          // _pad
+    size: 368,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
@@ -260,44 +257,41 @@ async function main()
     // projection
     glMatrix.mat4.identity(projMatrix);
     glMatrix.mat4.perspective(projMatrix, degToRad(45), 1.0, 0.1, 100);
-    device.queue.writeBuffer(uniformBuffer, 0, projMatrix);
+    device.queue.writeBuffer(uniformBuffer,   0, projMatrix);
 
     // viewing
     glMatrix.mat4.identity(viewMatrix);
     glMatrix.mat4.lookAt(viewMatrix, cameraPosition, [0,0,0], [0,1,0]);
-    device.queue.writeBuffer(uniformBuffer, 16*4, viewMatrix);
+    device.queue.writeBuffer(uniformBuffer,  64, viewMatrix);
 
     // model
     glMatrix.mat4.identity(modelMatrix);
     glMatrix.mat4.rotateY(modelMatrix, modelMatrix, degToRad(angle));
-    device.queue.writeBuffer(uniformBuffer, 32*4, modelMatrix);
+    device.queue.writeBuffer(uniformBuffer, 128, modelMatrix);
 
     // normal matrix
     glMatrix.mat4.identity(normalMatrix);
     glMatrix.mat4.invert(normalMatrix, modelMatrix);
     glMatrix.mat4.transpose(normalMatrix, normalMatrix);
-    device.queue.writeBuffer(uniformBuffer, 48*4, normalMatrix);
+    device.queue.writeBuffer(uniformBuffer, 192, normalMatrix);
 
     // lightPosition (vec3)
-    device.queue.writeBuffer(uniformBuffer, 64*4, lightPosition);
-    // ambientColor (vec3)
-    device.queue.writeBuffer(uniformBuffer, 64*4 + 4*4, ambientColor);
-    // diffuseColor (vec3)
-    device.queue.writeBuffer(uniformBuffer, 64*4 + 8*4, diffuseColor);
-    // specularColor (vec3)
-    device.queue.writeBuffer(uniformBuffer, 64*4 + 12*4, specularColor);
-
-    // Ka, Kd, Ks, shininess (all f32)
-    device.queue.writeBuffer(uniformBuffer, 64*4 + 16*4, new Float32Array([Ka, Kd, Ks, shininess]));
-
+    device.queue.writeBuffer(uniformBuffer, 256, lightPosition);
     // cameraPosition (vec3)
-    device.queue.writeBuffer(uniformBuffer, 64*4 + 20*4, cameraPosition);
+    device.queue.writeBuffer(uniformBuffer, 272, cameraPosition);
+    // ambientColor (vec3)
+    device.queue.writeBuffer(uniformBuffer, 288, ambientColor);
+    // diffuseColor (vec3)
+    device.queue.writeBuffer(uniformBuffer, 304, diffuseColor);
+    // specularColor (vec3)
+    device.queue.writeBuffer(uniformBuffer, 320, specularColor);
+    // Ka, Kd, Ks, shininess (all f32)
+    device.queue.writeBuffer(uniformBuffer, 336, new Float32Array([Ka, Kd, Ks, shininess]));
 
+    // draw the object
     passEncoder.drawIndexed(teapotData.indexCount);
 
     passEncoder.end();
-
-    // fire up the GPU to render the load value to the output texture
     device.queue.submit([commandEncoder.finish()]);
   };
 
