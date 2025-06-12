@@ -5,14 +5,14 @@ var projMatrix = glMatrix.mat4.create();
 var viewMatrix = glMatrix.mat4.create();
 var modelMatrix = glMatrix.mat4.create();
 var normalMatrix = glMatrix.mat4.create();
-var lightDirection = glMatrix.vec3.fromValues(1.0, -1.0, 1.0);
+var lightPosition = glMatrix.vec3.fromValues(10.0, 10.0, 10.0);
 var ambientColor = glMatrix.vec3.fromValues(0.2, 0.2, 0.2);
 var diffuseColor = glMatrix.vec3.fromValues(1.0, 1.0, 1.0);
 var specularColor = glMatrix.vec3.fromValues(1.0, 1.0, 1.0);
 var Ka = 0.5; // ambient reflectivity
-var Kd = 0.2; // diffuse reflectivity
+var Kd = 0.4; // diffuse reflectivity
 var Ks = 1.0; // specular reflectivity
-var shininess = 30.0; // shininess factor for specular highlights
+var shininess = 60.0; // shininess factor for specular highlights
 var cameraPosition = glMatrix.vec3.fromValues(0.0, 0.0, 60.0);
 
 var angle = 0.0; // rotation angle
@@ -93,7 +93,7 @@ async function main()
         viewMatrix: mat4x4<f32>,
         modelMatrix: mat4x4<f32>,
         normalMatrix: mat4x4<f32>,
-        lightDirection: vec3f,
+        lightPosition: vec3f,
         _pad1: f32, // padding to 16 bytes
         ambientColor: vec3f,
         _pad2: f32, // padding to 16 bytes
@@ -131,20 +131,25 @@ async function main()
         let pos_in_eye_space = (uniforms.viewMatrix * uniforms.modelMatrix * vec4f(in.pos, 1.0)).xyz;
 
         // light direction in the eye space
-        var light_dir_in_eye_space = normalize((uniforms.viewMatrix * vec4f(uniforms.lightDirection, 0.0)).xyz);
+        let light_position_in_eye_space = (uniforms.viewMatrix * vec4f(uniforms.lightPosition, 1.0)).xyz;
+        var light_dir_in_eye_space = normalize(light_position_in_eye_space - pos_in_eye_space);
 
         // normal in the eye space
-        var normal_in_eye_space = normalize((uniforms.normalMatrix * vec4f(in.normal, 0.0)).xyz);
+        var normal = normalize((uniforms.normalMatrix * vec4f(in.normal, 0.0)).xyz);
         
+        // light vector
+        var light_vector = normalize(uniforms.lightPosition - in.pos);
+
         // viewing direction in the eye space
-        var viewing_dir_in_eye_space = normalize(-uniforms.cameraPosition);
+        var eye_vector = normalize(-uniforms.cameraPosition);
 
         let ambient = uniforms.ambientColor * uniforms.Ka;
-        let diff = max(dot(normal_in_eye_space, light_dir_in_eye_space), 0.0);
-        let diffuse = uniforms.diffuseColor * uniforms.Kd * diff;
+        let ndotl = max(dot(normal, light_vector), 0.0);
+        let diffuse = uniforms.diffuseColor * uniforms.Kd * ndotl;
 
-        let reflectDir = reflect(-light_dir_in_eye_space, normal_in_eye_space);
-        let spec = pow(max(dot(viewing_dir_in_eye_space, reflectDir), 0.0), uniforms.shininess);
+        let reflectDir = reflect(light_vector, normal);
+        let rdotv = max(dot(reflectDir, eye_vector), 0.0);
+        let spec = pow(rdotv, uniforms.shininess);
         let specular = uniforms.specularColor * uniforms.Ks * spec;
 
         out.color = vec4(ambient + diffuse + specular, 1.0); 
@@ -205,7 +210,7 @@ async function main()
   // uniform buffers
   const uniformBuffer = device.createBuffer({
     size: 4 * 16 * 4 // 4 matrices
-      + 4 * 4 * 4   // 4 vec3 (lightDirection, ambientColor, diffuseColor, specularColor)
+      + 4 * 4 * 4   // 4 vec3 (lightPosition, ambientColor, diffuseColor, specularColor)
       + 4 * 4       // 4 f32 (Ka, Kd, Ks, shininess)
       + 4 * 4       // cameraPosition (vec3)
       + 4,          // _pad
@@ -273,8 +278,8 @@ async function main()
     glMatrix.mat4.transpose(normalMatrix, normalMatrix);
     device.queue.writeBuffer(uniformBuffer, 48*4, normalMatrix);
 
-    // lightDirection (vec3)
-    device.queue.writeBuffer(uniformBuffer, 64*4, lightDirection);
+    // lightPosition (vec3)
+    device.queue.writeBuffer(uniformBuffer, 64*4, lightPosition);
     // ambientColor (vec3)
     device.queue.writeBuffer(uniformBuffer, 64*4 + 4*4, ambientColor);
     // diffuseColor (vec3)
