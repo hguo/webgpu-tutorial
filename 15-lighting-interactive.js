@@ -143,7 +143,10 @@ async function main()
         // specular
         let reflectDir = reflect(light_dir_in_eye_space, normal);
         let rdotv = max(dot(reflectDir, eye_vector), 0.0);
-        let spec = pow(rdotv, uniforms.shininess);
+        var spec = pow(rdotv, uniforms.shininess);
+        if (ndotl <= 0.0) {
+          spec = 0.0; // no specular highlight if the light is not hitting the surface
+        }
         let specular = uniforms.specularColor * uniforms.Ks * spec;
 
         var out : VSOut;
@@ -160,6 +163,88 @@ async function main()
     `,
   });
 
+  // another module that implements per-fragment lighting
+  const module2 = device.createShaderModule({
+    label: 'simple lighting (per-fragment)',
+    code: `
+      struct Uniforms{
+        projMatrix: mat4x4<f32>,
+        viewMatrix: mat4x4<f32>,
+        modelMatrix: mat4x4<f32>,
+        normalMatrix: mat4x4<f32>,
+        lightPosition: vec3f,
+        cameraPosition: vec3f,
+        ambientColor: vec3f,
+        diffuseColor: vec3f,
+        specularColor: vec3f,
+        _pad1: f32, 
+        Ka: f32,
+        Kd: f32,
+        Ks: f32,
+        shininess: f32,
+        _pad: vec3f, // padding to 16-byte alignment
+      };
+      @group(0) @binding(0) var<uniform> uniforms : Uniforms;
+
+      struct VSIn {
+        @location(0) pos : vec3f,
+        @location(1) normal : vec3f,
+        @location(2) texcoords : vec2f,
+      };
+
+      struct VSOut {
+        @builtin(position) pos : vec4f,
+        @location(0) fragPosEye : vec3f,
+        @location(1) normalEye : vec3f,
+      };
+
+      @vertex fn vs(in : VSIn) -> VSOut
+      {
+        var out : VSOut;
+        let worldPos = uniforms.modelMatrix * vec4f(in.pos, 1.0);
+        let eyePos4 = uniforms.viewMatrix * worldPos;
+        out.pos = uniforms.projMatrix * eyePos4;
+        out.fragPosEye = (eyePos4.xyz / eyePos4.w);
+
+        // Transform normal to eye space
+        let worldNormal = (uniforms.normalMatrix * vec4f(in.normal, 0.0)).xyz;
+        out.normalEye = normalize((uniforms.viewMatrix * vec4f(worldNormal, 0.0)).xyz);
+
+        return out;
+      }
+
+      @fragment fn fs(vsOut : VSOut) -> @location(0) vec4f 
+      {
+        let N = normalize(vsOut.normalEye);
+
+        // Transform light position to eye space
+        let lightPos_eye = (uniforms.viewMatrix * vec4f(uniforms.lightPosition, 1.0)).xyz;
+        let L = normalize(lightPos_eye - vsOut.fragPosEye);
+
+        let V = normalize(-vsOut.fragPosEye); // camera at (0,0,0) in eye space
+
+        let ambient = uniforms.ambientColor * uniforms.Ka;
+        let ndotl = max(dot(N, L), 0.0);
+        let diffuse = uniforms.diffuseColor * uniforms.Kd * ndotl;
+
+        let R = reflect(-L, N);
+        let rdotv = max(dot(R, V), 0.0);
+        var spec = pow(rdotv, uniforms.shininess);
+        if (ndotl <= 0.0) {
+          spec = 0.0;
+        }
+        let specular = uniforms.specularColor * uniforms.Ks * spec;
+
+        // let color = vec3(uniforms.Ka, uniforms.Kd, uniforms.Ks);
+        // let color = uniforms.specularColor * uniforms.Ks;
+        // let color = vec3(uniforms.shininess, 0.0, 0.0) * 0.01;
+        // let color = vec3(spec, spec, spec);
+        let color = ambient + diffuse + specular;
+        return vec4f(color, 1.0);
+      }
+    `,
+  });
+  
   // the rendering pipeline
   const pipeline = device.createRenderPipeline({
     label: 'vertex buffer triangle pipeline',
@@ -206,7 +291,7 @@ async function main()
 
   // --- Uniform buffer size calculation ---
   // 4 matrices: 4*64 = 256 bytes
-  // 5 vec3: 5*16 = 80 bytes (lightPosition, ambientColor, diffuseColor, specularColor, cameraPosition)
+  // 5 vec3: 5*16 = 80 bytes (lightPosition, cameraPosition, ambientColor, diffuseColor, specularColor)
   // 4 f32: 16 bytes (Ka, Kd, Ks, shininess)
   // 1 vec3: 16 bytes (_pad)
   // Total: 256 + 80 + 16 + 16 = 368 bytes
@@ -279,16 +364,21 @@ async function main()
     // lightPosition (vec3)
     device.queue.writeBuffer(uniformBuffer, 256, lightPosition);
     // cameraPosition (vec3)
-    device.queue.writeBuffer(uniformBuffer, 272, cameraPosition);
+    device.queue.writeBuffer(uniformBuffer, 256 + 4 * 4, cameraPosition);
     // ambientColor (vec3)
-    device.queue.writeBuffer(uniformBuffer, 288, ambientColor);
+    device.queue.writeBuffer(uniformBuffer, 256 + 2 * 4 * 4, ambientColor);
     // diffuseColor (vec3)
-    device.queue.writeBuffer(uniformBuffer, 304, diffuseColor);
+    device.queue.writeBuffer(uniformBuffer, 256 + 3 * 4 * 4, diffuseColor);
     // specularColor (vec3)
-    device.queue.writeBuffer(uniformBuffer, 320, specularColor);
+    device.queue.writeBuffer(uniformBuffer, 256 + 4 * 4 * 4, specularColor);
     // Ka, Kd, Ks, shininess (all f32)
-    device.queue.writeBuffer(uniformBuffer, 336, new Float32Array([Ka, Kd, Ks, shininess]));
-
+    device.queue.writeBuffer(uniformBuffer, 256 + 5 * 4 * 4, new Float32Array([Ka, Kd, Ks, shininess]));
+    // device.queue.writeBuffer(uniformBuffer, 256 + 5 * 4 * 4, new Float32Array([Ka]));
+    // device.queue.writeBuffer(uniformBuffer, 256 + 5 * 4 * 4 + 4, new Float32Array([Kd]));
+    // device.queue.writeBuffer(uniformBuffer, 256 + 5 * 4 * 4 + 8, new Float32Array([Ks]));
+    // device.queue.writeBuffer(uniformBuffer, 256 + 5 * 4 * 4 + 12, new Float32Array([shininess]));
+    // console.log(shininess);
+    
     // draw the object
     passEncoder.drawIndexed(teapotData.indexCount);
 
@@ -304,5 +394,47 @@ async function main()
 
   animate();
 }
+
+function updateLightingFromUI() {
+  lightPosition[0] = parseFloat(document.getElementById("lightX").value);
+  lightPosition[1] = parseFloat(document.getElementById("lightY").value);
+  lightPosition[2] = parseFloat(document.getElementById("lightZ").value);
+
+  ambientColor[0] = parseFloat(document.getElementById("ambientR").value);
+  ambientColor[1] = parseFloat(document.getElementById("ambientG").value);
+  ambientColor[2] = parseFloat(document.getElementById("ambientB").value);
+
+  diffuseColor[0] = parseFloat(document.getElementById("diffuseR").value);
+  diffuseColor[1] = parseFloat(document.getElementById("diffuseG").value);
+  diffuseColor[2] = parseFloat(document.getElementById("diffuseB").value);
+
+  specularColor[0] = parseFloat(document.getElementById("specularR").value);
+  specularColor[1] = parseFloat(document.getElementById("specularG").value);
+  specularColor[2] = parseFloat(document.getElementById("specularB").value);
+
+  Ka = parseFloat(document.getElementById("Ka").value);
+  Kd = parseFloat(document.getElementById("Kd").value);
+  Ks = parseFloat(document.getElementById("Ks").value);
+  shininess = parseFloat(document.getElementById("shininess").value);
+}
+
+// Add event listeners after DOM is loaded
+window.addEventListener('DOMContentLoaded', () => {
+  [
+    "lightX", "lightY", "lightZ",
+    "ambientR", "ambientG", "ambientB",
+    "diffuseR", "diffuseG", "diffuseB",
+    "specularR", "specularG", "specularB",
+    "Ka", "Kd", "Ks", "shininess"
+  ].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', () => {
+      updateLightingFromUI();
+      render();
+    });
+  });
+  // Initialize JS values from UI at startup
+  updateLightingFromUI();
+});
 
 main();
