@@ -245,46 +245,55 @@ async function main()
     `,
   });
   
-  // the rendering pipeline
+  // --- Pipeline creation (share as much as possible) ---
+  const vertexBuffers = [
+    { 
+      arrayStride: 8 * 4,
+      attributes: [
+        { shaderLocation: 0, offset: 0, format: 'float32x3' },      // position
+        { shaderLocation: 1, offset: 3 * 4, format: 'float32x3' },  // normals
+        { shaderLocation: 2, offset: 6 * 4, format: 'float32x2' },  // texcoords
+      ]
+    },
+  ];
+
+  const depthStencil = {
+    format: 'depth24plus',
+    depthWriteEnabled: true,
+    depthCompare: 'less',
+  };
+
+  const fragmentTargets = [{ format: format }];
+
+  // --- Shared bind group layout and pipeline layout ---
+  const bindGroupLayout = device.createBindGroupLayout({
+    entries: [
+      {
+        binding: 0,
+        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        buffer: { type: 'uniform' }
+      }
+    ]
+  });
+
+  const pipelineLayout = device.createPipelineLayout({
+    bindGroupLayouts: [bindGroupLayout]
+  });
+
   const pipeline = device.createRenderPipeline({
     label: 'vertex buffer triangle pipeline',
-    layout: 'auto',
-    vertex: {
-      entryPoint: 'vs',
-      module: module, 
-      buffers: [
-        { 
-          arrayStride: 8 * 4,
-          attributes: [
-            {
-              shaderLocation: 0,  // position
-              offset: 0,
-              format: 'float32x3',
-            },
-            {
-              shaderLocation: 1,  // normals
-              offset: 3 * 4, // the offset is two floating-point numbers
-              format: 'float32x3',
-            },
-            {
-              shaderLocation: 2,  // texcoords
-              offset: 6 * 4, // the offset is three floating-point numbers
-              format: 'float32x2',
-            }
-          ]
-        },
-      ],
-    },
-    fragment: {
-      entryPoint: 'fs',
-      module: module,
-      targets: [{ format: format }],
-    },
-    depthStencil: { // enable depth testing
-      format: 'depth24plus',
-      depthWriteEnabled: true,
-      depthCompare: 'less',
-    },
+    layout: pipelineLayout,
+    vertex: { entryPoint: 'vs', module: module, buffers: vertexBuffers },
+    fragment: { entryPoint: 'fs', module: module, targets: fragmentTargets },
+    depthStencil,
+  });
+
+  const pipeline2 = device.createRenderPipeline({
+    label: 'vertex buffer triangle pipeline (per-fragment)',
+    layout: pipelineLayout,
+    vertex: { entryPoint: 'vs', module: module2, buffers: vertexBuffers },
+    fragment: { entryPoint: 'fs', module: module2, targets: fragmentTargets },
+    depthStencil,
   });
 
   const teapotData = await loadJSON(device, 'teapot.json');
@@ -300,16 +309,31 @@ async function main()
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
-  // bind groups
+  // --- Bind group (shared) ---
   const bindGroup = device.createBindGroup({
-    layout: pipeline.getBindGroupLayout(0),
+    layout: bindGroupLayout,
     entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
   });
 
+  // --- Pipeline switching logic ---
+  let currentPipeline = pipeline;
+
+  document.getElementById('vertexShading').addEventListener('change', (e) => {
+    if (e.target.checked) {
+      currentPipeline = pipeline;
+      render();
+    }
+  });
+  document.getElementById('fragmentShading').addEventListener('change', (e) => {
+    if (e.target.checked) {
+      currentPipeline = pipeline2;
+      render();
+    }
+  });
+
+  // --- Render function ---
   render = () => {
     const textureView = context.getCurrentTexture().createView(); 
- 
-    // the depth texture
     const depthTexture = device.createTexture({
       size: [canvas.width, canvas.height],
       format: 'depth24plus',
@@ -324,7 +348,7 @@ async function main()
         storeOp: 'store',
         loadOp: 'clear',
       }],
-      depthStencilAttachment: { // add the depth stencil attachment to enable the depth test
+      depthStencilAttachment: {
         view: depthTextureView,
         depthClearValue: 1.0,
         depthLoadOp: 'clear',
@@ -334,12 +358,11 @@ async function main()
 
     const commandEncoder = device.createCommandEncoder();
     const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
-    passEncoder.setPipeline(pipeline);
+    passEncoder.setPipeline(currentPipeline);
     passEncoder.setVertexBuffer(0, teapotData.vertex);
     passEncoder.setIndexBuffer(teapotData.index, 'uint32');
-
     passEncoder.setBindGroup(0, bindGroup);
-  
+
     // projection
     glMatrix.mat4.identity(projMatrix);
     glMatrix.mat4.perspective(projMatrix, degToRad(45), 1.0, 0.1, 100);
@@ -381,7 +404,6 @@ async function main()
     
     // draw the object
     passEncoder.drawIndexed(teapotData.indexCount);
-
     passEncoder.end();
     device.queue.submit([commandEncoder.finish()]);
   };
