@@ -68,4 +68,4 @@ This repository contains a series of WebGPU tutorials for CSE 5542 Each file dem
 
 Contact: Hanqi Guo (guo.2154@osu.edu)
 
-The tutorial materials are proted from the previous WebGL tutorial by Prof. Han-Wei Shen (shen.94@osu.edu)
+The tutorial materials are ported from the previous WebGL tutorial by Prof. Han-Wei Shen (shen.94@osu.edu)
