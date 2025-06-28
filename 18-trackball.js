@@ -15,7 +15,7 @@ var Kd = 0.4; // diffuse reflectivity
 var Ks = 1.0; // specular reflectivity
 var shininess = 100.0; // shininess factor for specular highlights
 
-var angle = 0.0; // rotation angle
+// var angle = 0.0; // rotation angle
 
 function degToRad(degrees) {
   return degrees * Math.PI / 180;
@@ -368,7 +368,7 @@ async function main()
 
     const angle = Math.acos(Math.min(1.0, glMatrix.vec3.dot(v1, v2) / (glMatrix.vec3.length(v1) * glMatrix.vec3.length(v2))));
     const q = glMatrix.quat.create();
-    glMatrix.quat.setAxisAngle(q, axis, angle);
+    glMatrix.quat.setAxisAngle(q, axis, 10. * angle);
     glMatrix.quat.normalize(q, q);
     glMatrix.quat.mul(rotationQuat, q, rotationQuat);
 
@@ -422,7 +422,7 @@ async function main()
     // model
     glMatrix.mat4.identity(modelMatrix);
     glMatrix.mat4.fromQuat(modelMatrix, rotationQuat);
-    glMatrix.mat4.rotateY(modelMatrix, modelMatrix, degToRad(angle)); // optional: keep your spinning animation
+    // glMatrix.mat4.rotateY(modelMatrix, modelMatrix, degToRad(angle)); // optional: keep your spinning animation
     device.queue.writeBuffer(uniformBuffer, 128, modelMatrix);
 
     // normal matrix
