@@ -343,6 +343,7 @@ async function main()
   let lastX = 0, lastY = 0;
   let rotationQuat = glMatrix.quat.create();
 
+
   // Mouse event handlers for trackball
   canvas.addEventListener('mousedown', (e) => {
     isDragging = true;
@@ -376,6 +377,17 @@ async function main()
     lastY = e.offsetY;
     render();
   });
+
+  // Mouse wheel for zooming
+  canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    // Zoom in/out by changing cameraPosition[2]
+    // Clamp zoom between 10 and 200
+    const zoomSpeed = 2.0;
+    cameraPosition[2] += e.deltaY * 0.01 * zoomSpeed;
+    cameraPosition[2] = Math.max(10, Math.min(200, cameraPosition[2]));
+    render();
+  }, { passive: false });
 
   // --- Render function ---
   render = () => {
