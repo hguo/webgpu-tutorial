@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>H Guo WebGPU tutorial - 3d lighting</title>
+  <script type="text/javascript" src="gl-matrix.js"></script>
+</head>
+<body>
+  <form class="controls">
+    <table cellpadding="2" cellspacing="0">
+      <tr>
+        <td><label for="lightX">Light Position:</label></td>
+        <td>X <input type="number" id="lightX" value="10" step="0.1" style="width:48px"></td>
+        <td>Y <input type="number" id="lightY" value="10" step="0.1" style="width:48px"></td>
+        <td>Z <input type="number" id="lightZ" value="10" step="0.1" style="width:48px"></td>
+      </tr>
+      <tr>
+        <td><label for="ambientR">Ambient Color:</label></td>
+        <td>R <input type="number" id="ambientR" value="0.2" step="0.01" min="0" max="1" style="width:48px"></td>
+        <td>G <input type="number" id="ambientG" value="0.2" step="0.01" min="0" max="1" style="width:48px"></td>
+        <td>B <input type="number" id="ambientB" value="0.2" step="0.01" min="0" max="1" style="width:48px"></td>
+        <td>Ka <input type="number" id="Ka" value="0.5" step="0.01" min="0" max="1" style="width:48px"></td>
+      </tr>
+      <tr>
+        <td><label for="diffuseR">Diffuse Color:</label></td>
+        <td>R <input type="number" id="diffuseR" value="1" step="0.01" min="0" max="1" style="width:48px"></td>
+        <td>G <input type="number" id="diffuseG" value="1" step="0.01" min="0" max="1" style="width:48px"></td>
+        <td>B <input type="number" id="diffuseB" value="1" step="0.01" min="0" max="1" style="width:48px"></td>
+        <td>Kd <input type="number" id="Kd" value="0.4" step="0.01" min="0" max="1" style="width:48px"></td>
+      </tr>
+      <tr>
+        <td><label for="specularR">Specular Color:</label></td>
+        <td>R <input type="number" id="specularR" value="1" step="0.01" min="0" max="1" style="width:48px"></td>
+        <td>G <input type="number" id="specularG" value="1" step="0.01" min="0" max="1" style="width:48px"></td>
+        <td>B <input type="number" id="specularB" value="1" step="0.01" min="0" max="1" style="width:48px"></td>
+        <td>Ks <input type="number" id="Ks" value="1.0" step="0.01" min="0" max="1" style="width:48px"></td>
+      </tr>
+      <tr>
+        <td><label for="shininess">Shininess:</label></td>
+        <td colspan="4"><input type="number" id="shininess" value="100" step="1" min="1" max="200" style="width:60px"></td>
+      </tr>
+      <tr>
+        <td colspan="5">
+          <label><input type="radio" name="shading" id="vertexShading" value="vertex" checked> Per-vertex shading</label>
+          <label><input type="radio" name="shading" id="fragmentShading" value="fragment"> Per-fragment shading</label>
+        </td>
+      </tr>
+    </table>
+  </form>
+  <canvas id="webgpu-canvas" width="500" height="500"></canvas>
+  <script src="19-compute-shader-sphere.js"></script>
+</body>
+</html>
