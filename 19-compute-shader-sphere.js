@@ -27,53 +27,6 @@ function projectToSphere(x, y) {
   return d < r * 0.7071067811865476 ? Math.sqrt(r * r - d * d) : (r * r) / (2 * d);
 }
 
-async function loadJSON(device, url) {
-  const res = await fetch(url);
-  const data = await res.json();
-  if (!data) {
-    fail('failed to load teapot data');
-    return;
-  }
-
-  const positions = new Float32Array(data.vertexPositions);
-  const normals = new Float32Array(data.vertexNormals);
-  const texcoords = new Float32Array(data.vertexTextureCoords);
-  const indices = new Uint32Array(data.indices);
-
-  // create a data buffer to interleave the vertex data
-  const interleavedData = new Float32Array(positions.length + normals.length + texcoords.length);
-  for (let i = 0, j = 0; i < positions.length; i += 3, j += 8) {
-    interleavedData[j] = positions[i];
-    interleavedData[j + 1] = positions[i + 1];
-    interleavedData[j + 2] = positions[i + 2];
-    interleavedData[j + 3] = normals[i];
-    interleavedData[j + 4] = normals[i + 1];
-    interleavedData[j + 5] = normals[i + 2];
-    interleavedData[j + 6] = texcoords[i];
-    interleavedData[j + 7] = texcoords[i + 1];
-  }
-
-  const vertex = device.createBuffer({
-    label: 'vertex buffer',
-    size: positions.byteLength + normals.byteLength + texcoords.byteLength,
-    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-  });
-  device.queue.writeBuffer(vertex, 0, interleavedData);
-
-  const index = device.createBuffer({
-    label: 'index buffer',
-    size: indices.byteLength,
-    usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
-  });
-  device.queue.writeBuffer(index, 0, indices);
-
-  return {
-    vertex, index, 
-    vertexCount: positions.length / 3, 
-    indexCount: indices.length
-  };
-}
-
 async function main()
 {
   // get webgpu adapter and device
@@ -409,7 +362,7 @@ async function main()
   }
 
   // Sphere data for rendering
-  const teapotData = {
+  const sphereData = {
     vertex: sphereVertexBuffer,
     index: sphereIndexBuffer,
     vertexCount: vertexCount,
@@ -527,8 +480,8 @@ async function main()
     const commandEncoder = device.createCommandEncoder();
     const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
     passEncoder.setPipeline(currentPipeline);
-    passEncoder.setVertexBuffer(0, teapotData.vertex);
-    passEncoder.setIndexBuffer(teapotData.index, 'uint32');
+    passEncoder.setVertexBuffer(0, sphereData.vertex);
+    passEncoder.setIndexBuffer(sphereData.index, 'uint32');
     passEncoder.setBindGroup(0, bindGroup);
 
     // projection
@@ -567,7 +520,7 @@ async function main()
     device.queue.writeBuffer(uniformBuffer, 256 + 5 * 4 * 4, new Float32Array([Ka, Kd, Ks, shininess]));
     
     // draw the object
-    passEncoder.drawIndexed(teapotData.indexCount);
+    passEncoder.drawIndexed(sphereData.indexCount);
     passEncoder.end();
     device.queue.submit([commandEncoder.finish()]);
   };
