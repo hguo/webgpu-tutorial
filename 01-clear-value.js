@@ -15,13 +15,15 @@ async function main()
   context.configure({device, format});
 
   const render = () => {
-    const textureView = context.getCurrentTexture().createView(); // the output is a texture, and we are getting a "view" of texture as the output of the render pass
+    // The output is a texture, and we are getting a "view" 
+    // of texture as the output of the render pass
+    const textureView = context.getCurrentTexture().createView(); 
     const renderPassDescriptor = {
       colorAttachments: [{
         view: textureView,
         clearValue: [1.0, 0.0, 0.0, 1.0], // an arbitrary color you prefer
-        storeOp: 'store',
-        loadOp: 'clear',
+        storeOp: 'store', // defines what happens after rendering
+        loadOp: 'clear', // defines what happnes at the beginning
       }],
     };
 
