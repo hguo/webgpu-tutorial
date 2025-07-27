@@ -18,7 +18,9 @@ async function main()
   const vsModule = device.createShaderModule({
     label: 'hardcoded triangle',
     code: `
-      @vertex fn vs(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4f {
+      @vertex fn vs(@builtin(vertex_index) vertexIndex: u32) 
+        -> @builtin(position) vec4f 
+      {
         var pos: vec4f;
 
         if (vertexIndex == 0) {
@@ -38,7 +40,8 @@ async function main()
   const fsModule = device.createShaderModule({
     label: 'hardcoded triangle',
     code: `
-      @fragment fn fs(@builtin(position) pos: vec4f) -> @location(0) vec4f 
+      @fragment fn fs(@builtin(position) pos: vec4f) 
+        -> @location(0) vec4f 
       {
         return vec4f(1.0, 0.0, 0.0, 1.0);
       }

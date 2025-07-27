@@ -19,7 +19,7 @@ async function main()
     // of texture as the output of the render pass
     const textureView = context.getCurrentTexture().createView(); 
     const renderPassDescriptor = {
-      colorAttachments: [{
+      colorAttachments: [{ // "attachments" refer to target texture that GPU renders to
         view: textureView,
         clearValue: [1.0, 0.0, 0.0, 1.0], // an arbitrary color you prefer
         storeOp: 'store', // defines what happens after rendering
