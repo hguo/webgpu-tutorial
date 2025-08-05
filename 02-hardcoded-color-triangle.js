@@ -16,66 +16,53 @@ async function main()
 
   // vertex and fragment shaders in one single module
   const module = device.createShaderModule({
-    label: 'vertex buffer triangle',
+    label: 'hardcoded color triangle',
     code: `
-      @vertex fn vs(@location(0) pos : vec2f) 
-        -> @builtin(position) vec4f 
-      {
-        return vec4f(pos, 0.0, 1.0);
-      }
+      struct VSOut {
+        @builtin(position) pos : vec4f,
+        @location(0) color : vec4f,
+      };
 
-      @fragment fn fs() 
+      @vertex fn vs(@builtin(vertex_index) vertexIndex: u32) 
+        -> VSOut
+      {
+        var pos : vec4f;
+        var color : vec4f;
+
+        if (vertexIndex == 0) {
+          pos = vec4f(0.0, 0.0, 0.0, 1.0);
+          color = vec4f(1.0, 0.0, 0.0, 1.0);
+        } else if (vertexIndex == 1) {
+          pos = vec4f(0.5, 0.0, 0.0, 1.0);
+          color = vec4f(0.0, 1.0, 0.0, 1.0);
+        } else if (vertexIndex == 2) {
+          pos = vec4f(0.0, 0.5, 0.0, 1.0);
+          color = vec4f(0.0, 0.0, 1.0, 1.0);
+        }
+
+        return VSOut(pos, color);
+      }
+      
+      @fragment fn fs(in : VSOut)
         -> @location(0) vec4f 
       {
-        return vec4f(1.0, 0.0, 0.0, 1.0);
+        return in.color;
       }
     `,
   });
 
   // the rendering pipeline
   const pipeline = device.createRenderPipeline({
-    label: 'vertex buffer triangle pipeline',
+    label: 'hardcoded triangle pipeline',
     layout: 'auto',
     vertex: {
-      entryPoint: 'vs',
-      module: module, 
-      buffers: [
-        { 
-          arrayStride: 2 * 4, // 2 floating-point numbers with 4 bytes each
-          attributes: [
-            {
-              shaderLocation: 0,
-              offset: 0,
-              format: 'float32x2',
-            }
-          ]
-        },
-      ],
+      module: module
     },
     fragment: {
-      entryPoint: 'fs',
       module: module,
       targets: [{ format: format }],
     },
   });
-
-  // vertex data
-  const vertexData = new Float32Array([
-    0.0, 0.0,
-    0.5, 0.0,
-    0.5, 0.5,
-    0.0, 0.0,
-    0.5, 0.5,
-    0.0, 0.5,
-  ]);
-
-  // vertex buffer for positions
-  const vertexBuffer = device.createBuffer({
-    label: 'vertex buffer for two triangles',
-    size: vertexData.byteLength,
-    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-  });
-  device.queue.writeBuffer(vertexBuffer, 0, vertexData);
 
   const render = () => {
     const textureView = context.getCurrentTexture().createView(); // the output is a texture, and we are getting a "view" of texture as the output of the render pass
@@ -91,8 +78,7 @@ async function main()
     const commandEncoder = device.createCommandEncoder();
     const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
     passEncoder.setPipeline(pipeline);
-    passEncoder.setVertexBuffer(0, vertexBuffer);
-    passEncoder.draw(vertexData.length / 2); 
+    passEncoder.draw(3); // draw three vertices
     passEncoder.end();
 
     // fire up the GPU to render the load value to the output texture

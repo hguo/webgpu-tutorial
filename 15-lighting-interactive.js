@@ -330,16 +330,18 @@ async function main()
       render();
     }
   });
+   
+  // depth texture
+  const depthTexture = device.createTexture({
+    size: [canvas.width, canvas.height],
+    format: 'depth24plus',
+    usage: GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+  const depthTextureView = depthTexture.createView();
 
   // --- Render function ---
   render = () => {
     const textureView = context.getCurrentTexture().createView(); 
-    const depthTexture = device.createTexture({
-      size: [canvas.width, canvas.height],
-      format: 'depth24plus',
-      usage: GPUTextureUsage.RENDER_ATTACHMENT,
-    });
-    const depthTextureView = depthTexture.createView();
     
     const renderPassDescriptor = {
       colorAttachments: [{

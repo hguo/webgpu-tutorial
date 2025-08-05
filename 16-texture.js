@@ -198,18 +198,19 @@ async function main()
       { binding: 2, resource: texture.createView() },
     ],
   });
+    
+  // the depth texture
+  const depthTexture = device.createTexture({
+    size: [canvas.width, canvas.height],
+    format: 'depth24plus',
+    usage: GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+  const depthTextureView = depthTexture.createView();
+    
 
   render = () => {
     const textureView = context.getCurrentTexture().createView(); 
- 
-    // the depth texture
-    const depthTexture = device.createTexture({
-      size: [canvas.width, canvas.height],
-      format: 'depth24plus',
-      usage: GPUTextureUsage.RENDER_ATTACHMENT,
-    });
-    const depthTextureView = depthTexture.createView();
-    
+
     const renderPassDescriptor = {
       colorAttachments: [{
         view: textureView,

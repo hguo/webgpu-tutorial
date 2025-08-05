@@ -34,7 +34,8 @@ async function main()
         return out;
       }
 
-      @fragment fn fs(vsOut : VSOut) -> @location(0) vec4f 
+      @fragment fn fs(vsOut : VSOut) 
+        -> @location(0) vec4f 
       {
         return vsOut.color;
       }
