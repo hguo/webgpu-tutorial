@@ -136,7 +136,7 @@ async function main()
 
   // the rendering pipeline
   const pipeline = device.createRenderPipeline({
-    label: 'vertex buffer triangle pipeline',
+    label: 'cube map shaders',
     layout: 'auto',
     vertex: {
       entryPoint: 'vs',
@@ -207,7 +207,7 @@ async function main()
     device.queue.copyExternalImageToTexture(
       { source: imageBitmap },
       { texture: cubeMap, origin: [0, 0, face] },
-      [imageBitmap.width, imageBitmap.height]
+      [imageBitmap.width, imageBitmap.height, 1]
     );
   }
 

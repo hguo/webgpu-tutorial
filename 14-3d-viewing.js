@@ -155,16 +155,16 @@ async function main()
     layout: pipeline.getBindGroupLayout(0),
     entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
   });
+ 
+  // the depth texture
+  const depthTexture = device.createTexture({
+    size: [canvas.width, canvas.height],
+    format: 'depth24plus',
+    usage: GPUTextureUsage.RENDER_ATTACHMENT,
+  });
 
   render = () => {
     const textureView = context.getCurrentTexture().createView(); 
- 
-    // the depth texture
-    const depthTexture = device.createTexture({
-      size: [canvas.width, canvas.height],
-      format: 'depth24plus',
-      usage: GPUTextureUsage.RENDER_ATTACHMENT,
-    });
     const depthTextureView = depthTexture.createView();
     
     const renderPassDescriptor = {
