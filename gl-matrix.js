@@ -3,9 +3,9 @@
 @fileoverview gl-matrix - High performance matrix and vector operations
 @author Brandon Jones
 @author Colin MacKenzie IV
-@version 3.4.1
+@version 3.4.4
 
-Copyright (c) 2015-2023, Brandon Jones, Colin MacKenzie IV.
+Copyright (c) 2015-2025, Brandon Jones, Colin MacKenzie IV.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -44,6 +44,17 @@ THE SOFTWARE.
   var ANGLE_ORDER = "zyx";
 
   /**
+   * Symmetric round
+   * see https://www.npmjs.com/package/round-half-up-symmetric#user-content-detailed-background
+   *
+   * @param {Number} a value to round
+   */
+  function round$3(a) {
+    if (a >= 0) return Math.round(a);
+    return a % 0.5 === 0 ? Math.floor(a) : Math.round(a);
+  }
+
+  /**
    * Sets the type of array used when creating new vectors and matrices
    *
    * @param {Float32ArrayConstructor | ArrayConstructor} type Array type, such as Float32Array or Array
@@ -52,6 +63,7 @@ THE SOFTWARE.
     ARRAY_TYPE = type;
   }
   var degree = Math.PI / 180;
+  var radian = 180 / Math.PI;
 
   /**
    * Convert Degree To Radian
@@ -63,23 +75,28 @@ THE SOFTWARE.
   }
 
   /**
+   * Convert Radian To Degree
+   *
+   * @param {Number} a Angle in Radians
+   */
+  function toDegree(a) {
+    return a * radian;
+  }
+
+  /**
    * Tests whether or not the arguments have approximately the same value, within an absolute
    * or relative tolerance of glMatrix.EPSILON (an absolute tolerance is used for values less
    * than or equal to 1.0, and a relative tolerance is used for larger values)
    *
-   * @param {Number} a The first number to test.
-   * @param {Number} b The second number to test.
+   * @param {Number} a          The first number to test.
+   * @param {Number} b          The second number to test.
+   * @param {Number} tolerance  Absolute or relative tolerance (default glMatrix.EPSILON)
    * @returns {Boolean} True if the numbers are approximately equal, false otherwise.
    */
   function equals$9(a, b) {
-    return Math.abs(a - b) <= EPSILON * Math.max(1.0, Math.abs(a), Math.abs(b));
+    var tolerance = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : EPSILON;
+    return Math.abs(a - b) <= tolerance * Math.max(1, Math.abs(a), Math.abs(b));
   }
-  if (!Math.hypot) Math.hypot = function () {
-    var y = 0,
-      i = arguments.length;
-    while (i--) y += arguments[i] * arguments[i];
-    return Math.sqrt(y);
-  };
 
   var common = /*#__PURE__*/Object.freeze({
     __proto__: null,
@@ -87,8 +104,10 @@ THE SOFTWARE.
     get ARRAY_TYPE () { return ARRAY_TYPE; },
     RANDOM: RANDOM,
     ANGLE_ORDER: ANGLE_ORDER,
+    round: round$3,
     setMatrixArrayType: setMatrixArrayType,
     toRadian: toRadian,
+    toDegree: toDegree,
     equals: equals$9
   });
 
@@ -221,7 +240,7 @@ THE SOFTWARE.
    *
    * @param {mat2} out the receiving matrix
    * @param {ReadonlyMat2} a the source matrix
-   * @returns {mat2} out
+   * @returns {mat2 | null} out, or null if source matrix is not invertible
    */
   function invert$5(out, a) {
     var a0 = a[0],
@@ -394,7 +413,7 @@ THE SOFTWARE.
    * @returns {Number} Frobenius norm
    */
   function frob$3(a) {
-    return Math.hypot(a[0], a[1], a[2], a[3]);
+    return Math.sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2] + a[3] * a[3]);
   }
 
   /**
@@ -686,7 +705,7 @@ THE SOFTWARE.
    *
    * @param {mat2d} out the receiving matrix
    * @param {ReadonlyMat2d} a the source matrix
-   * @returns {mat2d} out
+   * @returns {mat2d | null} out, or null if source matrix is not invertible
    */
   function invert$4(out, a) {
     var aa = a[0],
@@ -909,7 +928,7 @@ THE SOFTWARE.
    * @returns {Number} Frobenius norm
    */
   function frob$2(a) {
-    return Math.hypot(a[0], a[1], a[2], a[3], a[4], a[5], 1);
+    return Math.sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2] + a[3] * a[3] + a[4] * a[4] + a[5] * a[5] + 1);
   }
 
   /**
@@ -1259,7 +1278,7 @@ THE SOFTWARE.
    *
    * @param {mat3} out the receiving matrix
    * @param {ReadonlyMat3} a the source matrix
-   * @returns {mat3} out
+   * @returns {mat3 | null} out, or null if source matrix is not invertible
    */
   function invert$3(out, a) {
     var a00 = a[0],
@@ -1448,7 +1467,7 @@ THE SOFTWARE.
    * Scales the mat3 by the dimensions in the given vec2
    *
    * @param {mat3} out the receiving matrix
-   * @param {ReadonlyMat3} a the matrix to rotate
+   * @param {ReadonlyMat3} a the matrix to scale
    * @param {ReadonlyVec2} v the vec2 to scale the matrix by
    * @returns {mat3} out
    **/
@@ -1692,7 +1711,7 @@ THE SOFTWARE.
    * @returns {Number} Frobenius norm
    */
   function frob$1(a) {
-    return Math.hypot(a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8]);
+    return Math.sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2] + a[3] * a[3] + a[4] * a[4] + a[5] * a[5] + a[6] * a[6] + a[7] * a[7] + a[8] * a[8]);
   }
 
   /**
@@ -2119,7 +2138,7 @@ THE SOFTWARE.
    *
    * @param {mat4} out the receiving matrix
    * @param {ReadonlyMat4} a the source matrix
-   * @returns {mat4} out
+   * @returns {mat4 | null} out, or null if source matrix is not invertible
    */
   function invert$2(out, a) {
     var a00 = a[0],
@@ -2428,7 +2447,7 @@ THE SOFTWARE.
     var x = axis[0],
       y = axis[1],
       z = axis[2];
-    var len = Math.hypot(x, y, z);
+    var len = Math.sqrt(x * x + y * y + z * z);
     var s, c, t;
     var a00, a01, a02, a03;
     var a10, a11, a12, a13;
@@ -2700,7 +2719,7 @@ THE SOFTWARE.
     var x = axis[0],
       y = axis[1],
       z = axis[2];
-    var len = Math.hypot(x, y, z);
+    var len = Math.sqrt(x * x + y * y + z * z);
     var s, c, t;
     if (len < EPSILON) {
       return null;
@@ -2843,13 +2862,13 @@ THE SOFTWARE.
    * This is equivalent to (but much faster than):
    *
    *     mat4.identity(dest);
-   *     mat4.translate(dest, vec);
+   *     mat4.translate(dest, dest, vec);
    *     let quatMat = mat4.create();
-   *     quat4.toMat4(quat, quatMat);
-   *     mat4.multiply(dest, quatMat);
+   *     mat4.fromQuat(quatMat, quat);
+   *     mat4.multiply(dest, dest, quatMat);
    *
    * @param {mat4} out mat4 receiving operation result
-   * @param {quat4} q Rotation quaternion
+   * @param {quat} q Rotation quaternion
    * @param {ReadonlyVec3} v Translation vector
    * @returns {mat4} out
    */
@@ -2941,7 +2960,7 @@ THE SOFTWARE.
   /**
    * Returns the scaling factor component of a transformation
    *  matrix. If a matrix is built with fromRotationTranslationScale
-   *  with a normalized Quaternion paramter, the returned vector will be
+   *  with a normalized Quaternion parameter, the returned vector will be
    *  the same as the scaling vector
    *  originally supplied.
    * @param  {vec3} out Vector to receive scaling factor component
@@ -2958,9 +2977,9 @@ THE SOFTWARE.
     var m31 = mat[8];
     var m32 = mat[9];
     var m33 = mat[10];
-    out[0] = Math.hypot(m11, m12, m13);
-    out[1] = Math.hypot(m21, m22, m23);
-    out[2] = Math.hypot(m31, m32, m33);
+    out[0] = Math.sqrt(m11 * m11 + m12 * m12 + m13 * m13);
+    out[1] = Math.sqrt(m21 * m21 + m22 * m22 + m23 * m23);
+    out[2] = Math.sqrt(m31 * m31 + m32 * m32 + m33 * m33);
     return out;
   }
 
@@ -3040,9 +3059,9 @@ THE SOFTWARE.
     var m31 = mat[8];
     var m32 = mat[9];
     var m33 = mat[10];
-    out_s[0] = Math.hypot(m11, m12, m13);
-    out_s[1] = Math.hypot(m21, m22, m23);
-    out_s[2] = Math.hypot(m31, m32, m33);
+    out_s[0] = Math.sqrt(m11 * m11 + m12 * m12 + m13 * m13);
+    out_s[1] = Math.sqrt(m21 * m21 + m22 * m22 + m23 * m23);
+    out_s[2] = Math.sqrt(m31 * m31 + m32 * m32 + m33 * m33);
     var is1 = 1 / out_s[0];
     var is2 = 1 / out_s[1];
     var is3 = 1 / out_s[2];
@@ -3090,14 +3109,14 @@ THE SOFTWARE.
    * This is equivalent to (but much faster than):
    *
    *     mat4.identity(dest);
-   *     mat4.translate(dest, vec);
+   *     mat4.translate(dest, dest, vec);
    *     let quatMat = mat4.create();
-   *     quat4.toMat4(quat, quatMat);
-   *     mat4.multiply(dest, quatMat);
-   *     mat4.scale(dest, scale)
+   *     mat4.fromQuat(quatMat, quat);
+   *     mat4.multiply(dest, dest, quatMat);
+   *     mat4.scale(dest, dest, scale)
    *
    * @param {mat4} out mat4 receiving operation result
-   * @param {quat4} q Rotation quaternion
+   * @param {quat} q Rotation quaternion
    * @param {ReadonlyVec3} v Translation vector
    * @param {ReadonlyVec3} s Scaling vector
    * @returns {mat4} out
@@ -3147,16 +3166,16 @@ THE SOFTWARE.
    * This is equivalent to (but much faster than):
    *
    *     mat4.identity(dest);
-   *     mat4.translate(dest, vec);
-   *     mat4.translate(dest, origin);
+   *     mat4.translate(dest, dest, vec);
+   *     mat4.translate(dest, dest, origin);
    *     let quatMat = mat4.create();
-   *     quat4.toMat4(quat, quatMat);
-   *     mat4.multiply(dest, quatMat);
-   *     mat4.scale(dest, scale)
-   *     mat4.translate(dest, negativeOrigin);
+   *     mat4.fromQuat(quatMat, quat);
+   *     mat4.multiply(dest, dest, quatMat);
+   *     mat4.scale(dest, dest, scale)
+   *     mat4.translate(dest, dest, negativeOrigin);
    *
    * @param {mat4} out mat4 receiving operation result
-   * @param {quat4} q Rotation quaternion
+   * @param {quat} q Rotation quaternion
    * @param {ReadonlyVec3} v Translation vector
    * @param {ReadonlyVec3} s Scaling vector
    * @param {ReadonlyVec3} o The origin vector around which to scale and rotate
@@ -3523,14 +3542,14 @@ THE SOFTWARE.
     z0 = eyex - centerx;
     z1 = eyey - centery;
     z2 = eyez - centerz;
-    len = 1 / Math.hypot(z0, z1, z2);
+    len = 1 / Math.sqrt(z0 * z0 + z1 * z1 + z2 * z2);
     z0 *= len;
     z1 *= len;
     z2 *= len;
     x0 = upy * z2 - upz * z1;
     x1 = upz * z0 - upx * z2;
     x2 = upx * z1 - upy * z0;
-    len = Math.hypot(x0, x1, x2);
+    len = Math.sqrt(x0 * x0 + x1 * x1 + x2 * x2);
     if (!len) {
       x0 = 0;
       x1 = 0;
@@ -3544,7 +3563,7 @@ THE SOFTWARE.
     y0 = z1 * x2 - z2 * x1;
     y1 = z2 * x0 - z0 * x2;
     y2 = z0 * x1 - z1 * x0;
-    len = Math.hypot(y0, y1, y2);
+    len = Math.sqrt(y0 * y0 + y1 * y1 + y2 * y2);
     if (!len) {
       y0 = 0;
       y1 = 0;
@@ -3579,7 +3598,7 @@ THE SOFTWARE.
    *
    * @param {mat4} out mat4 frustum matrix will be written into
    * @param {ReadonlyVec3} eye Position of the viewer
-   * @param {ReadonlyVec3} center Point the viewer is looking at
+   * @param {ReadonlyVec3} target Point the viewer is looking at
    * @param {ReadonlyVec3} up vec3 pointing up
    * @returns {mat4} out
    */
@@ -3646,7 +3665,7 @@ THE SOFTWARE.
    * @returns {Number} Frobenius norm
    */
   function frob(a) {
-    return Math.hypot(a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8], a[9], a[10], a[11], a[12], a[13], a[14], a[15]);
+    return Math.sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2] + a[3] * a[3] + a[4] * a[4] + a[5] * a[5] + a[6] * a[6] + a[7] * a[7] + a[8] * a[8] + a[9] * a[9] + a[10] * a[10] + a[11] * a[11] + a[12] * a[12] + a[13] * a[13] + a[14] * a[14] + a[15] * a[15]);
   }
 
   /**
@@ -3928,7 +3947,7 @@ THE SOFTWARE.
     var x = a[0];
     var y = a[1];
     var z = a[2];
-    return Math.hypot(x, y, z);
+    return Math.sqrt(x * x + y * y + z * z);
   }
 
   /**
@@ -4096,16 +4115,16 @@ THE SOFTWARE.
   }
 
   /**
-   * Math.round the components of a vec3
+   * symmetric round the components of a vec3
    *
    * @param {vec3} out the receiving vector
    * @param {ReadonlyVec3} a vector to round
    * @returns {vec3} out
    */
   function round$2(out, a) {
-    out[0] = Math.round(a[0]);
-    out[1] = Math.round(a[1]);
-    out[2] = Math.round(a[2]);
+    out[0] = round$3(a[0]);
+    out[1] = round$3(a[1]);
+    out[2] = round$3(a[2]);
     return out;
   }
 
@@ -4151,7 +4170,7 @@ THE SOFTWARE.
     var x = b[0] - a[0];
     var y = b[1] - a[1];
     var z = b[2] - a[2];
-    return Math.hypot(x, y, z);
+    return Math.sqrt(x * x + y * y + z * z);
   }
 
   /**
@@ -4358,7 +4377,7 @@ THE SOFTWARE.
    * @returns {vec3} out
    */
   function random$3(out, scale) {
-    scale = scale || 1.0;
+    scale = scale === undefined ? 1.0 : scale;
     var r = RANDOM() * 2.0 * Math.PI;
     var z = RANDOM() * 2.0 - 1.0;
     var zScale = Math.sqrt(1.0 - z * z) * scale;
@@ -4413,40 +4432,35 @@ THE SOFTWARE.
    *
    * @param {vec3} out the receiving vector
    * @param {ReadonlyVec3} a the vector to transform
-   * @param {ReadonlyQuat} q quaternion to transform with
+   * @param {ReadonlyQuat} q normalized quaternion to transform with
    * @returns {vec3} out
    */
   function transformQuat$1(out, a, q) {
-    // benchmarks: https://jsperf.com/quaternion-transform-vec3-implementations-fixed
+    // Fast Vector Rotation using Quaternions by Robert Eisele
+    // https://raw.org/proof/vector-rotation-using-quaternions/
+
     var qx = q[0],
       qy = q[1],
       qz = q[2],
       qw = q[3];
-    var x = a[0],
-      y = a[1],
-      z = a[2];
-    // var qvec = [qx, qy, qz];
-    // var uv = vec3.cross([], qvec, a);
-    var uvx = qy * z - qz * y,
-      uvy = qz * x - qx * z,
-      uvz = qx * y - qy * x;
-    // var uuv = vec3.cross([], qvec, uv);
-    var uuvx = qy * uvz - qz * uvy,
-      uuvy = qz * uvx - qx * uvz,
-      uuvz = qx * uvy - qy * uvx;
-    // vec3.scale(uv, uv, 2 * w);
-    var w2 = qw * 2;
-    uvx *= w2;
-    uvy *= w2;
-    uvz *= w2;
-    // vec3.scale(uuv, uuv, 2);
-    uuvx *= 2;
-    uuvy *= 2;
-    uuvz *= 2;
-    // return vec3.add(out, a, vec3.add(out, uv, uuv));
-    out[0] = x + uvx + uuvx;
-    out[1] = y + uvy + uuvy;
-    out[2] = z + uvz + uuvz;
+    var vx = a[0],
+      vy = a[1],
+      vz = a[2];
+
+    // t = q x v
+    var tx = qy * vz - qz * vy;
+    var ty = qz * vx - qx * vz;
+    var tz = qx * vy - qy * vx;
+
+    // t = 2t
+    tx = tx + tx;
+    ty = ty + ty;
+    tz = tz + tz;
+
+    // v + w t + q x t
+    out[0] = vx + qw * tx + qy * tz - qz * ty;
+    out[1] = vy + qw * ty + qz * tx - qx * tz;
+    out[2] = vz + qw * tz + qx * ty - qy * tx;
     return out;
   }
 
@@ -4952,17 +4966,17 @@ THE SOFTWARE.
   }
 
   /**
-   * Math.round the components of a vec4
+   * symmetric round the components of a vec4
    *
    * @param {vec4} out the receiving vector
    * @param {ReadonlyVec4} a vector to round
    * @returns {vec4} out
    */
   function round$1(out, a) {
-    out[0] = Math.round(a[0]);
-    out[1] = Math.round(a[1]);
-    out[2] = Math.round(a[2]);
-    out[3] = Math.round(a[3]);
+    out[0] = round$3(a[0]);
+    out[1] = round$3(a[1]);
+    out[2] = round$3(a[2]);
+    out[3] = round$3(a[3]);
     return out;
   }
 
@@ -5011,7 +5025,7 @@ THE SOFTWARE.
     var y = b[1] - a[1];
     var z = b[2] - a[2];
     var w = b[3] - a[3];
-    return Math.hypot(x, y, z, w);
+    return Math.sqrt(x * x + y * y + z * z + w * w);
   }
 
   /**
@@ -5040,7 +5054,7 @@ THE SOFTWARE.
     var y = a[1];
     var z = a[2];
     var w = a[3];
-    return Math.hypot(x, y, z, w);
+    return Math.sqrt(x * x + y * y + z * z + w * w);
   }
 
   /**
@@ -5124,10 +5138,10 @@ THE SOFTWARE.
   /**
    * Returns the cross-product of three vectors in a 4-dimensional space
    *
-   * @param {ReadonlyVec4} result the receiving vector
-   * @param {ReadonlyVec4} U the first vector
-   * @param {ReadonlyVec4} V the second vector
-   * @param {ReadonlyVec4} W the third vector
+   * @param {ReadonlyVec4} out the receiving vector
+   * @param {ReadonlyVec4} u the first vector
+   * @param {ReadonlyVec4} v the second vector
+   * @param {ReadonlyVec4} w the third vector
    * @returns {vec4} result
    */
   function cross$1(out, u, v, w) {
@@ -5177,23 +5191,22 @@ THE SOFTWARE.
    * @returns {vec4} out
    */
   function random$2(out, scale) {
-    scale = scale || 1.0;
+    scale = scale === undefined ? 1.0 : scale;
 
     // Marsaglia, George. Choosing a Point from the Surface of a
     // Sphere. Ann. Math. Statist. 43 (1972), no. 2, 645--646.
     // http://projecteuclid.org/euclid.aoms/1177692644;
     var v1, v2, v3, v4;
     var s1, s2;
-    do {
-      v1 = RANDOM() * 2 - 1;
-      v2 = RANDOM() * 2 - 1;
-      s1 = v1 * v1 + v2 * v2;
-    } while (s1 >= 1);
-    do {
-      v3 = RANDOM() * 2 - 1;
-      v4 = RANDOM() * 2 - 1;
-      s2 = v3 * v3 + v4 * v4;
-    } while (s2 >= 1);
+    var rand;
+    rand = RANDOM();
+    v1 = rand * 2 - 1;
+    v2 = (4 * RANDOM() - 2) * Math.sqrt(rand * -rand + rand);
+    s1 = v1 * v1 + v2 * v2;
+    rand = RANDOM();
+    v3 = rand * 2 - 1;
+    v4 = (4 * RANDOM() - 2) * Math.sqrt(rand * -rand + rand);
+    s2 = v3 * v3 + v4 * v4;
     var d = Math.sqrt((1 - s1) / s2);
     out[0] = scale * v1;
     out[1] = scale * v2;
@@ -5227,28 +5240,35 @@ THE SOFTWARE.
    *
    * @param {vec4} out the receiving vector
    * @param {ReadonlyVec4} a the vector to transform
-   * @param {ReadonlyQuat} q quaternion to transform with
+   * @param {ReadonlyQuat} q normalized quaternion to transform with
    * @returns {vec4} out
    */
   function transformQuat(out, a, q) {
-    var x = a[0],
-      y = a[1],
-      z = a[2];
+    // Fast Vector Rotation using Quaternions by Robert Eisele
+    // https://raw.org/proof/vector-rotation-using-quaternions/
+
     var qx = q[0],
       qy = q[1],
       qz = q[2],
       qw = q[3];
+    var vx = a[0],
+      vy = a[1],
+      vz = a[2];
 
-    // calculate quat * vec
-    var ix = qw * x + qy * z - qz * y;
-    var iy = qw * y + qz * x - qx * z;
-    var iz = qw * z + qx * y - qy * x;
-    var iw = -qx * x - qy * y - qz * z;
+    // t = q x v
+    var tx = qy * vz - qz * vy;
+    var ty = qz * vx - qx * vz;
+    var tz = qx * vy - qy * vx;
 
-    // calculate result * inverse quat
-    out[0] = ix * qw + iw * -qx + iy * -qz - iz * -qy;
-    out[1] = iy * qw + iw * -qy + iz * -qx - ix * -qz;
-    out[2] = iz * qw + iw * -qz + ix * -qy - iy * -qx;
+    // t = 2t
+    tx = tx + tx;
+    ty = ty + ty;
+    tz = tz + tz;
+
+    // v + w t + q x t
+    out[0] = vx + qw * tx + qy * tz - qz * ty;
+    out[1] = vy + qw * ty + qz * tx - qx * tz;
+    out[2] = vz + qw * tz + qx * ty - qy * tx;
     out[3] = a[3];
     return out;
   }
@@ -5861,10 +5881,10 @@ THE SOFTWARE.
    * Creates a quaternion from the given euler angle x, y, z using the provided intrinsic order for the conversion.
    *
    * @param {quat} out the receiving quaternion
-   * @param {x} x Angle to rotate around X axis in degrees.
-   * @param {y} y Angle to rotate around Y axis in degrees.
-   * @param {z} z Angle to rotate around Z axis in degrees.
-   * @param {'zyx'|'xyz'|'yxz'|'yzx'|'zxy'|'zyx'} order Intrinsic order for conversion, default is zyx.
+   * @param {Number} x Angle to rotate around X axis in degrees.
+   * @param {Number} y Angle to rotate around Y axis in degrees.
+   * @param {Number} z Angle to rotate around Z axis in degrees.
+   * @param {'xyz'|'xzy'|'yxz'|'yzx'|'zxy'|'zyx'} order Intrinsic order for conversion, default is zyx.
    * @returns {quat} out
    * @function
    */
@@ -6751,7 +6771,7 @@ THE SOFTWARE.
     if (Math.abs(rad) < EPSILON) {
       return copy$1(out, a);
     }
-    var axisLength = Math.hypot(axis[0], axis[1], axis[2]);
+    var axisLength = Math.sqrt(axis[0] * axis[0] + axis[1] * axis[1] + axis[2] * axis[2]);
     rad = rad * 0.5;
     var s = Math.sin(rad);
     var bx = s * axis[0] / axisLength;
@@ -7273,15 +7293,15 @@ THE SOFTWARE.
   }
 
   /**
-   * Math.round the components of a vec2
+   * symmetric round the components of a vec2
    *
    * @param {vec2} out the receiving vector
    * @param {ReadonlyVec2} a vector to round
    * @returns {vec2} out
    */
   function round(out, a) {
-    out[0] = Math.round(a[0]);
-    out[1] = Math.round(a[1]);
+    out[0] = round$3(a[0]);
+    out[1] = round$3(a[1]);
     return out;
   }
 
@@ -7324,7 +7344,7 @@ THE SOFTWARE.
   function distance(a, b) {
     var x = b[0] - a[0],
       y = b[1] - a[1];
-    return Math.hypot(x, y);
+    return Math.sqrt(x * x + y * y);
   }
 
   /**
@@ -7349,7 +7369,7 @@ THE SOFTWARE.
   function length(a) {
     var x = a[0],
       y = a[1];
-    return Math.hypot(x, y);
+    return Math.sqrt(x * x + y * y);
   }
 
   /**
@@ -7462,7 +7482,7 @@ THE SOFTWARE.
    * @returns {vec2} out
    */
   function random(out, scale) {
-    scale = scale || 1.0;
+    scale = scale === undefined ? 1.0 : scale;
     var r = RANDOM() * 2.0 * Math.PI;
     out[0] = Math.cos(r) * scale;
     out[1] = Math.sin(r) * scale;
@@ -7558,22 +7578,32 @@ THE SOFTWARE.
   }
 
   /**
-   * Get the angle between two 2D vectors
+   * Get the smallest angle between two 2D vectors
    * @param {ReadonlyVec2} a The first operand
    * @param {ReadonlyVec2} b The second operand
    * @returns {Number} The angle in radians
    */
   function angle(a, b) {
-    var x1 = a[0],
-      y1 = a[1],
-      x2 = b[0],
-      y2 = b[1],
-      // mag is the product of the magnitudes of a and b
-      mag = Math.sqrt((x1 * x1 + y1 * y1) * (x2 * x2 + y2 * y2)),
-      // mag &&.. short circuits if mag == 0
-      cosine = mag && (x1 * x2 + y1 * y2) / mag;
-    // Math.min(Math.max(cosine, -1), 1) clamps the cosine between -1 and 1
-    return Math.acos(Math.min(Math.max(cosine, -1), 1));
+    var ax = a[0],
+      ay = a[1],
+      bx = b[0],
+      by = b[1];
+    return Math.abs(Math.atan2(ay * bx - ax * by, ax * bx + ay * by));
+  }
+
+  /**
+   * Get the signed angle in the interval [-pi,pi] between two 2D vectors (positive if `a` is to the right of `b`)
+   * 
+   * @param {ReadonlyVec2} a The first vector
+   * @param {ReadonlyVec2} b The second vector
+   * @returns {number} The signed angle in radians
+   */
+  function signedAngle(a, b) {
+    var ax = a[0],
+      ay = a[1],
+      bx = b[0],
+      by = b[1];
+    return Math.atan2(ax * by - ay * bx, ax * bx + ay * by);
   }
 
   /**
@@ -7739,6 +7769,7 @@ THE SOFTWARE.
     transformMat4: transformMat4,
     rotate: rotate,
     angle: angle,
+    signedAngle: signedAngle,
     zero: zero,
     str: str,
     exactEquals: exactEquals,
