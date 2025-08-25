@@ -144,7 +144,7 @@ async function main()
         buffer: {
           type: 'uniform',
           hasDynamicOffset: true,
-          minBindingSize: 16 * 4 // one 4x4 matrix
+          // minBindingSize: 16 * 4 // one 4x4 matrix
         }
       }
     ]
@@ -219,7 +219,7 @@ async function main()
 
   // Use 256-byte alignment for dynamic uniform buffers
   const matrixSize = 16 * 4; // 64 bytes for a 4x4 matrix
-  const alignedMatrixSize = 256; // WebGPU requires 256-byte alignment
+  const alignedMatrixSize = 256; // WebGPU requires 256-byte alignment for dynamic offsets
 
   // one single uniform buffer for the sun, earth, moon, mars (aligned)
   const uniformBuffer = device.createBuffer({
